@@ -139,6 +139,34 @@ export function createCountryCard(
   // teclado (Enter/Space) para accesibilidad.
   // =========================================================================
 
+  // =========================================================================
+  // MANEJO DE FAVORITOS
+  // =========================================================================
+  const favBtn = card.querySelector('.favorite-btn');
+  if (favBtn) {
+    favBtn.addEventListener('click', (event) => {
+      // IMPORTANTE: Esto evita que el click se "cuele" hacia la tarjeta y abra el modal.
+      event.stopPropagation();
+      
+      const code = favBtn.getAttribute('data-code');
+      if (code) {
+        const isNowFav = toggleFavorite(code);
+        
+        // Actualizamos visualmente el ícono (con el color y el relleno).
+        const svg = favBtn.querySelector('svg');
+        if (svg) {
+          if (isNowFav) {
+            svg.classList.add('text-red-500', 'fill-current');
+            svg.classList.remove('text-slate-200');
+          } else {
+            svg.classList.add('text-slate-200');
+            svg.classList.remove('text-red-500', 'fill-current');
+          }
+        }
+      }
+    });
+  }
+
   // Manejador de click
   card.addEventListener('click', () => {
     onClick(country);
