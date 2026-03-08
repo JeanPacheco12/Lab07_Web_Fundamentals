@@ -207,16 +207,18 @@ function render(state: UiState): void {
  */
 async function handleSearch(): Promise<void> {
   const query = searchInput.value.trim();
+  const selectedRegion = regionFilter.value;
 
-  // Si la búsqueda está vacía, volvemos al estado inicial
-  if (query.length === 0) {
+  // Si ambos filtros están vacíos, volvemos al estado inicial
+  if (query.length === 0 && selectedRegion === '') {
     render({ status: 'idle' });
     lastSearchQuery = '';
     return;
   }
 
-  // Evitamos búsquedas duplicadas
-  if (query === lastSearchQuery && currentState.status === 'success') {
+  // Creamos una clave de búsqueda combinada para evitar repeticiones.
+  const currentSearchKey = `${query}-${selectedRegion}`;
+  if (currentSearchKey === lastSearchQuery && currentState.status === 'success') {
     return;
   }
 
@@ -232,7 +234,19 @@ async function handleSearch(): Promise<void> {
     // await pausa la ejecución hasta que la Promise se resuelve.
     // Si la Promise se rechaza, el error se captura en el catch.
     // =========================================================================
-    const countries = await searchCountries(query);
+    let countries: Country[] = [];
+
+    // Obtenemos los países base (por nombre si hay texto, o todos si solo hay región).
+    if (query.length > 0) {
+      countries = await searchCountries(query);
+    } else {
+      countries = await getAllCountries();
+    }
+
+    // Aplicamos el filtro secundario de región (si el usuario seleccionó alguna).
+    if (selectedRegion !== '') {
+      countries = countries.filter(country => country.region === selectedRegion);
+    }
 
     if (countries.length === 0) {
       render({ status: 'empty' });
@@ -243,11 +257,9 @@ async function handleSearch(): Promise<void> {
     // Determinamos el mensaje de error apropiado
     let message = 'Error desconocido al buscar países';
 
-    if (error instanceof ApiError) {
+    if (error instanceof ApiError || error instanceof Error) {
       message = error.message;
-    } else if (error instanceof Error) {
-      message = error.message;
-    }
+    } 
 
     render({ status: 'error', message });
 
