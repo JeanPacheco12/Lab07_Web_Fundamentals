@@ -222,7 +222,7 @@ async function handleSearch(): Promise<void> {
     return;
   }
 
-  lastSearchQuery = query;
+  lastSearchQuery = currentSearchKey;
 
   // Mostramos estado de carga
   render({ status: 'loading' });
