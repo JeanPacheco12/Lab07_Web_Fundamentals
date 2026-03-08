@@ -324,6 +324,11 @@ function setupEventListeners(): void {
 
   // Botón de reintentar
   retryButton.addEventListener('click', handleRetry);
+
+  // Nuevo: Escucha los cambios en el dropdown para filtrar automáticamente.
+  regionFilter.addEventListener('change', () => {
+    void handleSearch();
+  });
 }
 
 /**
@@ -340,6 +345,9 @@ function initializeApp(): void {
 
     // Configuramos los event listeners
     setupEventListeners();
+
+    // Nuevo: Aquí llenamos el dropdown de regiones al iniciar.
+    void populateRegions();
 
     // Mostramos el estado inicial
     render({ status: 'idle' });
