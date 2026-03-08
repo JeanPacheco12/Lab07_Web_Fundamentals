@@ -34,8 +34,10 @@ import type { Country, UiState } from './types/country';
 import { renderCountryList } from './components/CountryCard';
 import { openModal } from './components/CountryModal';
 import { getRequiredElement, showElement, hideElement, onDOMReady, debounce } from './utils/dom';
-// Agrega getAllCountries a la importación desde countryApi.
+// Agregue getAllCountries a la importación desde countryApi.
 import { searchCountries, getCountriesByRegion, ApiError } from './services/countryApi';
+// Agregue esta importación para saber si el país es favorito o no.
+import { isFavorite } from './utils/storage';
 
 // =============================================================================
 // ESTADO DE LA APLICACIÓN
@@ -60,6 +62,8 @@ let lastSearchQuery = '';
 let searchInput: HTMLInputElement;
 // Nueva variable para el filtro.
 let regionFilter: HTMLSelectElement;
+// Nueva variable para los favoritos.
+let favoritesToggle: HTMLInputElement; 
 let searchButton: HTMLButtonElement;
 let retryButton: HTMLButtonElement;
 let loadingState: HTMLElement;
@@ -76,6 +80,7 @@ let countriesList: HTMLElement;
 function initializeElements(): void {
   searchInput = getRequiredElement<HTMLInputElement>('#searchInput');
   regionFilter = getRequiredElement<HTMLSelectElement>('#regionFilter');
+  favoritesToggle = getRequiredElement<HTMLInputElement>('#regionFilter');
   searchButton = getRequiredElement<HTMLButtonElement>('#searchButton');
   retryButton = getRequiredElement<HTMLButtonElement>('#retryButton');
   loadingState = getRequiredElement<HTMLElement>('#loadingState');
@@ -230,6 +235,12 @@ async function handleSearch(): Promise<void> {
       countries = await getCountriesByRegion(selectedRegion as any);
     }
 
+    // Nuevo: Este filtro adicional de Favoritos.
+    // Si el checkbox está marcado, filtramos la lista para dejar solo los favoritos.
+    if (favoritesToggle.checked) {
+      countries = countries.filter(country => isFavorite(country.cca3));
+    }
+
     if (countries.length === 0) {
       render({ status: 'empty' });
     } else {
@@ -304,6 +315,11 @@ function setupEventListeners(): void {
 
   // Nuevo: Escucha los cambios en el dropdown para filtrar automáticamente.
   regionFilter.addEventListener('change', () => {
+    void handleSearch();
+  });
+
+  // Nuevo: Escucha los cambios en el checkbox de favoritos.
+  favoritesToggle.addEventListener('change', () => {
     void handleSearch();
   });
 }
