@@ -31,12 +31,11 @@
 // =============================================================================
 
 import type { Country, UiState } from './types/country';
-import { searchCountries, ApiError } from './services/countryApi';
 import { renderCountryList } from './components/CountryCard';
 import { openModal } from './components/CountryModal';
 import { getRequiredElement, showElement, hideElement, onDOMReady, debounce } from './utils/dom';
 // Agrega getAllCountries a la importación desde countryApi.
-import { searchCountries, getAllCountries, ApiError } from './services/countryApi';
+import { searchCountries, getCountriesByRegion, ApiError } from './services/countryApi';
 
 // =============================================================================
 // ESTADO DE LA APLICACIÓN
@@ -90,25 +89,16 @@ function initializeElements(): void {
 /**
  * Obtiene todos los países, extrae las regiones únicas y las agrega al dropdown.
  */
-async function populateRegions(): Promise<void> {
-  try {
-    const countries = await getAllCountries();
-    
-    // Aquí se extraen las regiones, elimina los duplicados usando Set y ordena alfabéticamente.
-    const uniqueRegions = Array.from(new Set(countries.map(c => c.region)))
-      .filter(region => region) // Se filtra por si hay algún país sin región definida.
-      .sort();
-
-    // Crea una opción HTML por cada región y la inserta en el select.
-    uniqueRegions.forEach(region => {
-      const option = document.createElement('option');
-      option.value = region;
-      option.textContent = region;
-      regionFilter.appendChild(option);
-    });
-  } catch (error) {
-    console.error('Error al poblar las regiones:', error);
-  }
+function populateRegions(): void {
+  // Usamos exactamente las regiones que pide el Definition of Done
+  const regions = ['Africa', 'Americas', 'Asia', 'Europe', 'Oceania'];
+  
+  regions.forEach(region => {
+    const option = document.createElement('option');
+    option.value = region;
+    option.textContent = region;
+    regionFilter.appendChild(option);
+  });
 }
 
 // =============================================================================
@@ -209,43 +199,35 @@ async function handleSearch(): Promise<void> {
   const query = searchInput.value.trim();
   const selectedRegion = regionFilter.value;
 
-  // Si ambos filtros están vacíos, volvemos al estado inicial
   if (query.length === 0 && selectedRegion === '') {
     render({ status: 'idle' });
     lastSearchQuery = '';
     return;
   }
 
-  // Creamos una clave de búsqueda combinada para evitar repeticiones.
   const currentSearchKey = `${query}-${selectedRegion}`;
   if (currentSearchKey === lastSearchQuery && currentState.status === 'success') {
     return;
   }
 
   lastSearchQuery = currentSearchKey;
-
-  // Mostramos estado de carga
   render({ status: 'loading' });
 
   try {
-    // =========================================================================
-    // ASYNC/AWAIT Y MANEJO DE ERRORES
-    // =========================================================================
-    // await pausa la ejecución hasta que la Promise se resuelve.
-    // Si la Promise se rechaza, el error se captura en el catch.
-    // =========================================================================
     let countries: Country[] = [];
 
-    // Obtenemos los países base (por nombre si hay texto, o todos si solo hay región).
     if (query.length > 0) {
+      // 1. Si hay texto, buscamos por nombre en la API
       countries = await searchCountries(query);
-    } else {
-      countries = await getAllCountries();
-    }
-
-    // Aplicamos el filtro secundario de región (si el usuario seleccionó alguna).
-    if (selectedRegion !== '') {
-      countries = countries.filter(country => country.region === selectedRegion);
+      
+      // Y si el usuario también seleccionó una región, filtramos localmente
+      if (selectedRegion !== '') {
+        countries = countries.filter(country => country.region === selectedRegion);
+      }
+    } else if (selectedRegion !== '') {
+      // 2. Si SOLO hay región (no hay texto), usamos el endpoint específico de región
+      // Hacemos el cast "as any" porque el select devuelve un string genérico
+      countries = await getCountriesByRegion(selectedRegion as any);
     }
 
     if (countries.length === 0) {
@@ -254,16 +236,11 @@ async function handleSearch(): Promise<void> {
       render({ status: 'success', data: countries });
     }
   } catch (error) {
-    // Determinamos el mensaje de error apropiado
     let message = 'Error desconocido al buscar países';
-
     if (error instanceof ApiError || error instanceof Error) {
       message = error.message;
     } 
-
     render({ status: 'error', message });
-
-    // Log para debugging (en producción usaríamos un servicio de logging)
     console.error('Error en búsqueda:', error);
   }
 }
