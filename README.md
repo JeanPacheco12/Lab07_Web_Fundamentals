@@ -1,4 +1,4 @@
-# Country Explorer - Laboratorio 06
+# Country Explorer - Laboratorio 07
 
 Esta aplicación web desarrollada para el curso de Fundamentos de Aplicaciones Web. Permite a los usuarios buscar, filtrar y guardar información detallada sobre todos los países del mundo consumiendo la REST Countries API.
 
